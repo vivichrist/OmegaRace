@@ -1,0 +1,23 @@
+# depslib dependency file v1.0
+1378813196 source:/home/vivichrist/workspace/Omega/main.c
+	"include.h"
+
+1368225238 /home/vivichrist/workspace/Omega/include.h
+	<stdlib.h>
+	<math.h>
+	<SDL/SDL.h>
+	<SDL/sge.h>
+	"typedef.h"
+	"draw.h"
+
+1368236327 /home/vivichrist/workspace/Omega/typedef.h
+
+1368194166 /home/vivichrist/workspace/Omega/draw.h
+
+1367730221 /home/vivichrist/workspace/Omega/draw.c
+	"include.h"
+	"typedef.h"
+
+1368226528 source:/home/vivichrist/workspace/Omega/draw.c
+	"include.h"
+

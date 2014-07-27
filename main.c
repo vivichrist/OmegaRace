@@ -1,0 +1,171 @@
+#include "include.h"
+
+void addGameEntity( GameEntity **head,
+					Entity kind,
+					Uint16 x,
+					Uint16 y )
+{	GameEntity *newEnt = ( GameEntity * )malloc( sizeof( GameEntity ) );
+	newEnt->type = kind;
+	newEnt->orientation = 0.0D;
+	newEnt->speed = 0.0D;
+	newEnt->point.x = x;
+	newEnt->point.y = y;
+	newEnt->next = NULL;
+	if ( !*head || kind <= ( *head )->type )
+	{	newEnt->next = *head;
+		*head = newEnt;
+	} else
+	{	GameEntity *ptrEnt = *head;
+		while ( 1 )
+		{	if ( !ptrEnt->next )
+			{	ptrEnt->next = newEnt;
+				break;
+			} else if ( ptrEnt->next->type <= kind )
+			{	newEnt->next = ptrEnt->next;
+				ptrEnt->next = newEnt;
+				break;
+			}
+			ptrEnt = ptrEnt->next;
+		}
+
+	}
+}
+
+GameEntity *findGameEntity( GameEntity **head,
+					Entity kind )
+{
+	GameEntity *ptrEnt = *head;
+	while ( ptrEnt )
+	{	if ( ptrEnt->type == kind )
+			return ptrEnt;
+		ptrEnt = ptrEnt->next;
+	}
+	return *head;
+}
+
+void movePlayer( GameEntity *player )
+{	Uint16 *x = &(player->point.x), *y = &(player->point.y);
+	if (*x > HEIGHT-(PLAYER_SIZE>>1)
+			|| *x < (PLAYER_SIZE>>1)
+			|| ( *x < HEIGHT-BOXMARG_H+(PLAYER_SIZE>>1)
+				&& *x > BOXMARG_H-(PLAYER_SIZE>>1)) )
+		player->direction = M_PI_2 - player->direction;
+	if (*y > WIDTH-(PLAYER_SIZE>>1)
+			|| *y < (PLAYER_SIZE>>1)
+			|| ( *y < WIDTH-BOXMARG_W+(PLAYER_SIZE>>1)
+				&& *y > BOXMARG_W-(PLAYER_SIZE>>1)) )
+		player->direction = M_PI - player->direction;
+	*x += player->speed*cos( player->direction );
+	*y += player->speed*sin( player->direction );
+}
+
+void moveGameEntities( GameEntity *head )
+{	Point *plpoint = NULL;
+	while ( head )
+	{	if ( head->type == player )
+		{	movePlayer( head );
+			plpoint = &head->point; // for collison and tracking
+		}
+		// TODO: the rest of the entities
+		head = head->next;
+	}
+}
+
+void removeGameEntity( GameEntity **head, GameEntity *toRemove )
+{
+	if ( *head == toRemove )
+	{	*head = ( *head )->next;
+		free( toRemove );
+		return;
+	}
+	GameEntity *ge = *head;
+	while ( ge && ge->next != toRemove )
+		ge=ge->next;
+	if ( !ge ) return; // didn't find
+	ge->next = ge->next->next;
+	free( toRemove );
+}
+
+
+
+int main ( int argc, char** argv )
+{
+    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    {	printf( "Unable to init SDL: %s\n", SDL_GetError() );
+        return 1;
+    }
+    atexit( SDL_Quit );
+    SDL_Surface* screen = SDL_SetVideoMode( WIDTH, HEIGHT, 16,
+                                           SDL_HWSURFACE|SDL_DOUBLEBUF );
+	SDL_Rect screenRect = {0, 0, WIDTH, HEIGHT};
+    if ( !screen )
+    {	printf( "Unable to set 640x480 video: %s\n", SDL_GetError() );
+        return 1;
+    }
+    GameEntity *gameQueue = NULL;
+    addGameEntity( &gameQueue, player
+				, WIDTH >> 1, HEIGHT-( BOXMARG_H >> 1 ) );
+	addGameEntity( &gameQueue, ufo
+				, WIDTH >> 1, BOXMARG_H >> 1 );
+    short int done = 0;
+    while ( !done )
+    {   SDL_Event event;
+        while ( SDL_PollEvent( &event ) )
+        {
+            switch ( event.type )
+            {	case SDL_QUIT:
+					done = 1;
+					break;
+				case SDL_KEYDOWN:
+                {   GameEntity *e;
+                	switch ( event.key.keysym.sym  )
+					{	case SDLK_q :
+							done = 1;
+							break;
+						// TODO: all of the following cases are...
+						// possibly wrong
+						case SDLK_w :
+							e = findGameEntity( &gameQueue, player );
+							if ( e->speed )
+							{	e->speed *= 1.1D;
+							} else
+							{	e->speed = 2.0D;
+							}
+							e->orientation = (e->orientation
+											  + e->direction) / 2.0D;
+							break;
+						case SDLK_a :
+							e = findGameEntity( &gameQueue, player );
+							e->orientation += INCREMENT;
+							break;
+						case SDLK_s :
+							e = findGameEntity( &gameQueue, player );
+							if ( e->speed )
+							{	e->speed *= 0.9D;
+							}
+							e->orientation = (e->orientation
+											  + e->direction) / 2.0D;
+							break;
+						case SDLK_d :
+							e = findGameEntity( &gameQueue, player );
+							e->orientation -= INCREMENT;
+							break;
+						default :
+							break;
+					}
+					break;
+                }
+            }
+        }
+        moveGameEntities( gameQueue );
+        // clear screen
+		SDL_FillRect( screen, &screenRect, 0x000000 );
+        // DRAWING STARTS HERE
+        drawEntities( screen, gameQueue );
+        drawBoundaries( screen );
+        // DRAWING ENDS HERE
+        SDL_Flip( screen );
+    }
+    printf( "Exited cleanly\n" );
+    return 0;
+}
